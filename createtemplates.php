@@ -44,6 +44,6 @@ function install_templates() {
                 array_push($templates, $templateid);
             }
         }
-        set_config('fqw_templates', implode(',', $templates));
+        //set_config('fqw_templates', implode(',', $templates));
     }
 }
