@@ -60,7 +60,7 @@ class observer {
      * @param object $event event data
      * @return void
      */
-    public static function format_fqw_gekmember_assigned(\core\event\role_assigned $event) {
+    public static function format_fqw_gekmember_assigned_handler(\core\event\role_assigned $event) {
         global $DB, $CFG;
 
         // Извлекаем данные события
@@ -151,7 +151,7 @@ class observer {
         $assignment->cmid = $cmid;
         $assignment->courseid = $courseid;
         $assignment->userid = $userid;
-        $DB->insert_record('format_fqw_auto_assignments', $assignment);
+        $DB->insert_record('format_fqw_gek_assignment', $assignment);
     }
 
     private static function add_availability_condition($cmid, $courseid, $completion_itemname) {
@@ -187,7 +187,7 @@ class observer {
     }
     
 
-    public static function format_fqw_gekmember_unassigned(\core\event\role_unassigned $event) {
+    public static function format_fqw_gekmember_unassigned_handler(\core\event\role_unassigned $event) {
         global $DB;
 
         // Извлекаем данные события
@@ -214,7 +214,7 @@ class observer {
         self::format_fqw_delete_gekmebmer_assignment($courseid, $userid);
     }
 
-    public static function format_fqw_gekmember_unenroled(\core\event\user_enrolment_deleted $event) {
+    public static function format_fqw_gekmember_unenroled_handler(\core\event\user_enrolment_deleted $event) {
         global $DB;
 
         // Извлекаем данные события
@@ -229,14 +229,14 @@ class observer {
         global $DB;
 
         // Ищем задание, созданное для данного пользователя в данном курсе
-        $assignment = $DB->get_record('format_fqw_auto_assignments', array('courseid' => $courseid, 'userid' => $userid), '*', IGNORE_MISSING);
+        $assignment = $DB->get_record('format_fqw_gek_assignment', array('courseid' => $courseid, 'userid' => $userid), '*', IGNORE_MISSING);
 
         if ($assignment) {
             // Удаляем задание
             course_delete_module($assignment->cmid);
 
-            // Удаляем запись из таблицы 'format_fqw_auto_assignments'
-            $DB->delete_records('format_fqw_auto_assignments', array('id' => $assignment->id));
+            // Удаляем запись из таблицы 'format_fqw_gek_assignment'
+            $DB->delete_records('format_fqw_gek_assignment', array('id' => $assignment->id));
         }
     }
 }
