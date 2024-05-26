@@ -1,21 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="course/format/fqw/db" VERSION="20240525" COMMENT="XMLDB file for Moodle course/format/fqw"
+<XMLDB PATH="course/format/fqw/db" VERSION="20240526" COMMENT="XMLDB file for Moodle course/format/fqw"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="format_fqw" COMMENT="Default comment for format_fqw, please edit me">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-      </KEYS>
-    </TABLE>
     <TABLE NAME="format_fqw_template" COMMENT="Course template definitions.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="18" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="rename" SEQUENCE="false"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="descriptionformat" TYPE="int" LENGTH="18" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="preview_url" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
@@ -32,6 +24,23 @@
         <FIELD NAME="visible" TYPE="int" LENGTH="2" NOTNULL="false" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="format" TYPE="char" LENGTH="40" NOTNULL="false" SEQUENCE="false"/>
       </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="format_fqw_gek_assignment" COMMENT="Auto-created assignments for gek members">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="cmid" TYPE="foreign" FIELDS="cmid" REFTABLE="course_modules" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
     </TABLE>
   </TABLES>
 </XMLDB>
