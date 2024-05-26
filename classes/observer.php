@@ -36,7 +36,7 @@ class observer {
      * @param object $event event data
      * @return void
      */
-    public static function format_fqw_course_created(\core\event\course_created $event) {
+    public static function format_fqw_restore_template(\core\event\course_created $event) {
         global $DB;
 
         $createdcourse = $DB->get_record('course', ['id' => $event->courseid], 'format', MUST_EXIST);
@@ -44,14 +44,14 @@ class observer {
         // Проверяем, что формат курса 'fqw'
         if ($createdcourse->format == 'fqw') {
             // Получаем значение параметра шаблона курса из таблицы course_format_options
-            $templateoption = $DB->get_record('course_format_options', [
-                'courseid' => $event->courseid,
-                'format' => 'fqw',
-                'name' => 'coursetemplate'
-            ], 'value', MUST_EXIST);
+            // $templateoption = $DB->get_record('course_format_options', [
+            //     'courseid' => $event->courseid,
+            //     'format' => 'fqw',
+            //     'name' => 'coursetemplate'
+            // ], 'value', MUST_EXIST);
 
-            $templateid = $templateoption->value;
-            course_importer::import_from_template($templateid, $event->courseid);
+            //$templateid = $templateoption->value;
+            course_importer::import_from_template(1, $event->courseid);
         }     
     }
 
