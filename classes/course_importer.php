@@ -46,17 +46,16 @@ class course_importer {
      * @throws \restore_controller_exception
      */
     public static function import_from_template($templateid, $courseid) {
-        global $CFG, $DB, $PAGE;
+        global $CFG, $DB;
         require_once($CFG->dirroot."/course/lib.php");
         $template = $DB->get_record('format_fqw_template', ['id' => $templateid], '*', MUST_EXIST);
 
         $fs = get_file_storage();
-        $files = $fs->get_area_files(\context_system::instance()->id, 'format_fqw', 'course_backups',
-            $template->id, '', false);
+        $files = $fs->get_area_files(\context_system::instance()->id, 'format_fqw', 'course_backups', $template->id, '', false);
         $files = array_values($files);
 
         if (!isset($files[0])) {
-            throw new \moodle_exception('coursebackupnotset', 'format_kickstart');
+            throw new \moodle_exception('coursebackupnotset', 'format_fqw');
         }
 
         $fp = get_file_packer('application/vnd.moodle.backup');
@@ -79,9 +78,8 @@ class course_importer {
         global $USER, $DB;
 
         $course = $DB->get_record('course', ['id' => $courseid]);
-        $details = \backup_general_helper::get_backup_information($backuptempdir);
         $settings = [
-            'overwrite_conf' => true,
+            'overwrite_conf' => false,
             'course_shortname' => $course->shortname,
             'course_fullname' => $course->fullname,
             'course_startdate' => $course->startdate,
