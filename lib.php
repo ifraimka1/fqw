@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+defined('MOODLE_INTERNAL') || die();
+require_once($CFG->dirroot . '/course/format/lib.php');
+
 /**
  *  Format base class.
  *
@@ -21,12 +24,62 @@
  * @copyright   2024 Solomonov Ifraim <mr.ifraim@yandex.ru>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-defined('MOODLE_INTERNAL') || die();
-require_once($CFG->dirroot . '/course/format/lib.php');
-
 class format_fqw extends core_courseformat\base {
+    
+    public function uses_sections() {
+        return true;
+    }
 
     public function uses_indentation(): bool {
+        return true;
+    }
+
+    public function can_delete_section($section) {
+        return false;
+    }
+    
+    /**
+     * Returns the display name of the given section that the course prefers.
+     *
+     * Use section name is specified by user. Otherwise use default ("Section #").
+     *
+     * @param int|stdClass $section Section object from database or just field section.section
+     * @return string Display name that the course format prefers, e.g. "Section 2"
+     */
+    public function get_section_name($section) {
+        $section = $this->get_section($section);
+        if ((string)$section->name !== '') {
+            return format_string($section->name, true,
+                ['context' => context_course::instance($this->courseid)]);
+        } else {
+            return $this->get_default_section_name($section);
+        }
+    }
+
+    /**
+     * Returns the default section name for the sections course format.
+     *
+     * If the section number is 0, it will use the string with key = section0name from the course format's lang file.
+     * If the section number is not 0, the base implementation of course_format::get_default_section_name which uses
+     * the string with the key = 'sectionname' from the course format's lang file + the section number will be used.
+     *
+     * @param stdClass $section Section object from database or just field course_sections section
+     * @return string The default value for the section name.
+     */
+    public function get_default_section_name($section) {
+        if ($section->section == 0) {
+            // Return the general section.
+            return get_string('section0name', 'format_fqw');
+        } else {
+            // Use course_format::get_default_section_name implementation which
+            // will display the section name in "Section n" format.
+            return parent::get_default_section_name($section);
+        }
+    }
+
+    // Переопределите метод, который обрабатывает редактирование секции
+    public function allows_editing_section_name($section) {
+        // Возвращаем false, чтобы запретить изменение имени секции
         return false;
     }
 
@@ -47,7 +100,7 @@ class format_fqw extends core_courseformat\base {
     /**
      * Definitions of the additional options that this course format uses for course.
      *
-     * Topics format uses the following options:
+     * Sections format uses the following options:
      * - coursetemplate
      * - teamslink
      *
@@ -63,6 +116,14 @@ class format_fqw extends core_courseformat\base {
                     'default' => 1,
                     'type' => PARAM_INT,
                 ],
+                'opendate' => [
+                    'default' => 0,
+                    'type' => PARAM_INT,
+                ],
+                'closedate' => [
+                    'default' => 0,
+                    'type' => PARAM_INT,
+                ],
             ];
         }
         if ($foreditform && !isset($courseformatoptions['coursedisplay']['label'])) {
@@ -73,10 +134,31 @@ class format_fqw extends core_courseformat\base {
                     'element_type' => 'select',
                     'element_attributes' => array($templates),
                 ],
+                'opendate' => [
+                    'label' => get_string('opendate', 'format_fqw'),
+                    'element_type' => 'date_time_selector',
+                ],
+                'closedate' => [
+                    'label' => get_string('closedate', 'format_fqw'),
+                    'element_type' => 'date_time_selector',
+                ],
             ];
             $courseformatoptions = array_merge_recursive($courseformatoptions, $courseformatoptionsedit);
         }
         return $courseformatoptions;
+    }
+    
+    /**
+     * Return the plugin configs for external functions.
+     *
+     * @return array the list of configuration settings
+     * @since Moodle 3.5
+     */
+    public function get_config_for_external() {
+        // Return everything (nothing to hide).
+        $formatoptions = $this->get_format_options();
+        $formatoptions['indentation'] = get_config('format_topics', 'indentation');
+        return $formatoptions;
     }
 }
 

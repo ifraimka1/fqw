@@ -22,8 +22,6 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 namespace format_fqw;
-
-use \format_fqw\course_importer;
 use stdClass;
 
 /**
@@ -52,11 +50,60 @@ class observer {
 
             $templateid = $template->value;
             course_importer::import_from_template($templateid, $event->courseid);
-        }     
+            self::format_fqw_update_assignment_dates($event->courseid);
+        }
+    }
+
+    public static function format_fqw_update_course(\core\event\course_updated $event) {
+        global $DB;
+
+        $updatedcourse = $DB->get_record('course', ['id' => $event->courseid], 'format', MUST_EXIST);
+
+        if ($updatedcourse->format == 'fqw') {
+
+            $data = $event->other["updatedfields"];
+
+            $opendate = isset($data['opendate']) ? $data['opendate'] : null;
+            $closedate = isset($data['closedate']) ? $data['closedate'] : null;
+
+            if ($opendate !== null || $closedate !== null) {
+                self::format_fqw_update_assignment_dates($event->courseid);
+            }
+        }
+    }
+
+    private static function format_fqw_update_assignment_dates($courseid) {
+        global $DB;
+
+        $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
+        $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
+
+        if ($opendate || $closedate) {
+            $assignments = $DB->get_records('assign', ['course' => $courseid]);
+
+            foreach ($assignments as $assignment) {
+                $update = false;
+                $assignmentdata = new stdClass();
+                $assignmentdata->id = $assignment->id;
+
+                if ($opendate) {
+                    $assignmentdata->allowsubmissionsfromdate = $opendate;
+                    $update = true;
+                }
+                if ($closedate) {
+                    $assignmentdata->duedate = $closedate;
+                    $update = true;
+                }
+
+                if ($update) {
+                    $DB->update_record('assign', $assignmentdata);
+                }
+            }
+        }
     }
 
     /**
-     * Callback function will import template to the course.
+     * Will create assignment for gekmember.
      * @param object $event event data
      * @return void
      */

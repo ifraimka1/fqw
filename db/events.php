@@ -25,19 +25,24 @@ defined('MOODLE_INTERNAL') || die();
 
 $observers = [
     [
-        'eventname' => 'core\event\course_created',
-        'callback' => '\format_fqw\observer::format_fqw_restore_template',
+        'eventname' => '\core\event\course_created',
+        'callback'  => '\format_fqw\observer::format_fqw_restore_template',
+    ],
+    [
+        'eventname' => '\core\event\course_updated',
+        'callback'  => '\format_fqw\observer::format_fqw_update_course',
     ],
     [
         'eventname' => '\core\event\role_assigned',
-        'callback'    => '\format_fqw\observer::format_fqw_gekmember_assigned_handler',
+        'callback'  => '\format_fqw\observer::format_fqw_gekmember_assigned_handler',
     ],
     [
         'eventname' => '\core\event\role_unassigned',
-        'callback'    => '\format_fqw\observer::format_fqw_gekmember_unassigned_handler',
+        'callback'  => '\format_fqw\observer::format_fqw_gekmember_unassigned_handler',
     ],
     [
-        'eventname'   => '\core\event\user_enrolment_deleted',
-        'callback'    => 'format_autoassign_observer::format_fqw_gekmember_unenroled_handler',
+        'eventname' => '\core\event\user_enrolment_deleted',
+        'callback'  => '\format_fqw\observer::format_fqw_gekmember_unenroled_handler',
     ],
+    
 ];

@@ -49,7 +49,7 @@ $defaulttemplates = [
         'title' => 'МОП ЭВМ 09.04.04',
         'description' => '<p dir="ltr" style="text-align: left;">Шаблон для МОП ЭВМ 09.04.04</p>',
         'tags' => [],
-        'backupfile' => 'fqw_template.mbz',
+        'backupfile' => 'fqw_template_mop.mbz',
         'preview_url' => '',
         'restrictcohort' => 0,
         'cohortids' => [],
