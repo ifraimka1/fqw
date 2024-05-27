@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'format_fqw';
-$plugin->release = '0.1.2';
-$plugin->version = 2024052604;
+$plugin->release = '0.1.3';
+$plugin->version = 2024052700;
 $plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_ALPHA;

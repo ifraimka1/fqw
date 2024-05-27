@@ -44,6 +44,40 @@ class format_fqw extends core_courseformat\base {
         return $ajaxsupport;
     }
 
+    /**
+     * Definitions of the additional options that this course format uses for course.
+     *
+     * Topics format uses the following options:
+     * - coursetemplate
+     * - teamslink
+     *
+     * @param bool $foreditform
+     * @return array of options
+     */
+    public function course_format_options($foreditform = false) {
+        global $DB;
+        static $courseformatoptions = false;
+        if ($courseformatoptions === false) {
+            $courseformatoptions = [
+                'coursetemplate' => [
+                    'default' => 1,
+                    'type' => PARAM_INT,
+                ],
+            ];
+        }
+        if ($foreditform && !isset($courseformatoptions['coursedisplay']['label'])) {
+            $templates = $DB->get_records_menu('format_fqw_template', null, '', 'id, title');
+            $courseformatoptionsedit = [
+                'coursetemplate' => [
+                    'label' => get_string('coursetemplate', 'format_fqw'),
+                    'element_type' => 'select',
+                    'element_attributes' => array($templates),
+                ],
+            ];
+            $courseformatoptions = array_merge_recursive($courseformatoptions, $courseformatoptionsedit);
+        }
+        return $courseformatoptions;
+    }
 }
 
 /**

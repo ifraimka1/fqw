@@ -44,14 +44,14 @@ class observer {
         // Проверяем, что формат курса 'fqw'
         if ($createdcourse->format == 'fqw') {
             // Получаем значение параметра шаблона курса из таблицы course_format_options
-            // $templateoption = $DB->get_record('course_format_options', [
-            //     'courseid' => $event->courseid,
-            //     'format' => 'fqw',
-            //     'name' => 'coursetemplate'
-            // ], 'value', MUST_EXIST);
+            $template = $DB->get_record('course_format_options', [
+                'courseid' => $event->courseid,
+                'format' => 'fqw',
+                'name' => 'coursetemplate'
+            ], 'value', MUST_EXIST);
 
-            //$templateid = $templateoption->value;
-            course_importer::import_from_template(1, $event->courseid);
+            $templateid = $template->value;
+            course_importer::import_from_template($templateid, $event->courseid);
         }     
     }
 

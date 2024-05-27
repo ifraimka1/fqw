@@ -26,3 +26,4 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'FQW';
+$string['coursetemplate'] = 'Course template';
