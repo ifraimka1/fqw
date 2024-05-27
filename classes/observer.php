@@ -22,8 +22,6 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 namespace format_fqw;
-
-use \format_fqw\course_importer;
 use stdClass;
 
 /**
@@ -44,23 +42,72 @@ class observer {
         // Проверяем, что формат курса 'fqw'
         if ($createdcourse->format == 'fqw') {
             // Получаем значение параметра шаблона курса из таблицы course_format_options
-            // $templateoption = $DB->get_record('course_format_options', [
-            //     'courseid' => $event->courseid,
-            //     'format' => 'fqw',
-            //     'name' => 'coursetemplate'
-            // ], 'value', MUST_EXIST);
+            $template = $DB->get_record('course_format_options', [
+                'courseid' => $event->courseid,
+                'format' => 'fqw',
+                'name' => 'coursetemplate'
+            ], 'value', MUST_EXIST);
 
-            //$templateid = $templateoption->value;
-            course_importer::import_from_template(1, $event->courseid);
-        }     
+            $templateid = $template->value;
+            course_importer::import_from_template($templateid, $event->courseid);
+            self::format_fqw_update_assignment_dates($event->courseid);
+        }
+    }
+
+    public static function format_fqw_update_course(\core\event\course_updated $event) {
+        global $DB;
+
+        $updatedcourse = $DB->get_record('course', ['id' => $event->courseid], 'format', MUST_EXIST);
+
+        if ($updatedcourse->format == 'fqw') {
+
+            $data = $event->other["updatedfields"];
+
+            $opendate = isset($data['opendate']) ? $data['opendate'] : null;
+            $closedate = isset($data['closedate']) ? $data['closedate'] : null;
+
+            if ($opendate !== null || $closedate !== null) {
+                self::format_fqw_update_assignment_dates($event->courseid);
+            }
+        }
+    }
+
+    private static function format_fqw_update_assignment_dates($courseid) {
+        global $DB;
+
+        $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
+        $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
+
+        if ($opendate || $closedate) {
+            $assignments = $DB->get_records('assign', ['course' => $courseid]);
+
+            foreach ($assignments as $assignment) {
+                $update = false;
+                $assignmentdata = new stdClass();
+                $assignmentdata->id = $assignment->id;
+
+                if ($opendate) {
+                    $assignmentdata->allowsubmissionsfromdate = $opendate;
+                    $update = true;
+                }
+                if ($closedate) {
+                    $assignmentdata->duedate = $closedate;
+                    $update = true;
+                }
+
+                if ($update) {
+                    $DB->update_record('assign', $assignmentdata);
+                }
+            }
+        }
     }
 
     /**
-     * Callback function will import template to the course.
+     * Will create assignment for gekmember.
      * @param object $event event data
      * @return void
      */
-    public static function format_fqw_gekmember_assigned(\core\event\role_assigned $event) {
+    public static function format_fqw_gekmember_assigned_handler(\core\event\role_assigned $event) {
         global $DB, $CFG;
 
         // Извлекаем данные события
@@ -151,7 +198,7 @@ class observer {
         $assignment->cmid = $cmid;
         $assignment->courseid = $courseid;
         $assignment->userid = $userid;
-        $DB->insert_record('format_fqw_auto_assignments', $assignment);
+        $DB->insert_record('format_fqw_gek_assignment', $assignment);
     }
 
     private static function add_availability_condition($cmid, $courseid, $completion_itemname) {
@@ -187,7 +234,7 @@ class observer {
     }
     
 
-    public static function format_fqw_gekmember_unassigned(\core\event\role_unassigned $event) {
+    public static function format_fqw_gekmember_unassigned_handler(\core\event\role_unassigned $event) {
         global $DB;
 
         // Извлекаем данные события
@@ -214,7 +261,7 @@ class observer {
         self::format_fqw_delete_gekmebmer_assignment($courseid, $userid);
     }
 
-    public static function format_fqw_gekmember_unenroled(\core\event\user_enrolment_deleted $event) {
+    public static function format_fqw_gekmember_unenroled_handler(\core\event\user_enrolment_deleted $event) {
         global $DB;
 
         // Извлекаем данные события
@@ -229,14 +276,14 @@ class observer {
         global $DB;
 
         // Ищем задание, созданное для данного пользователя в данном курсе
-        $assignment = $DB->get_record('format_fqw_auto_assignments', array('courseid' => $courseid, 'userid' => $userid), '*', IGNORE_MISSING);
+        $assignment = $DB->get_record('format_fqw_gek_assignment', array('courseid' => $courseid, 'userid' => $userid), '*', IGNORE_MISSING);
 
         if ($assignment) {
             // Удаляем задание
             course_delete_module($assignment->cmid);
 
-            // Удаляем запись из таблицы 'format_fqw_auto_assignments'
-            $DB->delete_records('format_fqw_auto_assignments', array('id' => $assignment->id));
+            // Удаляем запись из таблицы 'format_fqw_gek_assignment'
+            $DB->delete_records('format_fqw_gek_assignment', array('id' => $assignment->id));
         }
     }
 }

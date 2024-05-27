@@ -26,3 +26,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'FQW';
+$string['coursetemplate'] = 'Course template';
+$string['opendate'] = 'Allow allowsubmissions from';
+$string['closedate'] = 'Deadline';
+
+$string['addsections'] = 'Add section';
+$string['currentsection'] = 'This section';
+$string['editsection'] = 'Edit section';
+$string['editsectionname'] = 'Edit section name';
+$string['deletesection'] = 'Delete section';
+$string['newsectionname'] = 'New name for section {$a}';
+$string['sectionname'] = 'Section';
+$string['section0name'] = 'General';
+$string['hidefromothers'] = 'Hide section';
+$string['showfromothers'] = 'Show section';
