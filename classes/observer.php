@@ -50,7 +50,7 @@ class observer {
 
             $templateid = $template->value;
             course_importer::import_from_template($templateid, $event->courseid);
-            self::format_fqw_update_assignment_dates($event->courseid);
+            self::format_fqw_update_assignment_dates($event->courseid, true, true);
         }
     }
 
@@ -60,46 +60,55 @@ class observer {
         $updatedcourse = $DB->get_record('course', ['id' => $event->courseid], 'format', MUST_EXIST);
 
         if ($updatedcourse->format == 'fqw') {
-
             $data = $event->other["updatedfields"];
 
-            $opendate = isset($data['opendate']) ? $data['opendate'] : null;
-            $closedate = isset($data['closedate']) ? $data['closedate'] : null;
+            $isopendatachanged = isset($data['opendate']);
+            $isclosedatachanged = isset($data['closedate']);
 
-            if ($opendate !== null || $closedate !== null) {
-                self::format_fqw_update_assignment_dates($event->courseid);
+            if ($isopendatachanged || $isclosedatachanged) {
+                self::format_fqw_update_assignment_dates($event->courseid, $isopendatachanged, $isclosedatachanged);
             }
         }
     }
 
-    private static function format_fqw_update_assignment_dates($courseid) {
+    private static function format_fqw_update_assignment_dates($courseid, $isopendatachanged = false, $isclosedatachanged = false) {
         global $DB;
 
-        $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
-        $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
-
-        if ($opendate || $closedate) {
-            $assignments = $DB->get_records('assign', ['course' => $courseid]);
-
-            foreach ($assignments as $assignment) {
-                $update = false;
-                $assignmentdata = new stdClass();
-                $assignmentdata->id = $assignment->id;
-
-                if ($opendate) {
-                    $assignmentdata->allowsubmissionsfromdate = $opendate;
-                    $update = true;
-                }
-                if ($closedate) {
-                    $assignmentdata->duedate = $closedate;
-                    $update = true;
-                }
-
-                if ($update) {
-                    $DB->update_record('assign', $assignmentdata);
-                }
-            }
+        if ($isopendatachanged === true) {
+            $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
         }
+        if ($isclosedatachanged === true) {
+            $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
+        }
+        
+        // Получаем задания только из секции с id=1
+        $assignments = $DB->get_records_sql(
+            "SELECT a.*
+            FROM {assign} a
+            JOIN {course_modules} cm ON cm.instance = a.id
+            JOIN {modules} m ON m.id = cm.module
+            JOIN {course_sections} cs ON cs.id = cm.section
+            WHERE a.course = ? AND cs.section = 1",
+            [$courseid]
+        );
+
+        foreach ($assignments as $assignment) {
+            $assignmentdata = new \stdClass();
+            $assignmentdata->id = $assignment->id;
+
+            if ($isopendatachanged === true) {
+                $assignmentdata->allowsubmissionsfromdate = $opendate;
+            }
+            if ($isclosedatachanged === true) {
+                $assignmentdata->duedate = $closedate;
+            }
+            
+            $DB->update_record('assign', $assignmentdata);
+        }
+
+        // Очистка кэша для курса
+        \cache_helper::invalidate_by_definition('core', 'coursemodinfo', [$courseid]);
+        rebuild_course_cache($courseid, true);
     }
 
     /**
