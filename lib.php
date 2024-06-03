@@ -198,6 +198,7 @@ function format_fqw_create_template($template, $sort, $context) {
                 $fs->create_file_from_pathname($filerecord, $backuppath);
             }
         }
+        
         return $id;
     }
 }

@@ -44,5 +44,4 @@ $observers = [
         'eventname' => '\core\event\user_enrolment_deleted',
         'callback'  => '\format_fqw\observer::format_fqw_gekmember_unenroled_handler',
     ],
-    
 ];

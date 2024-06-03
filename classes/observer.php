@@ -23,6 +23,7 @@
  */
 namespace format_fqw;
 use stdClass;
+use core_course;
 
 /**
  * Event observer class define.
@@ -62,53 +63,104 @@ class observer {
         if ($updatedcourse->format == 'fqw') {
             $data = $event->other["updatedfields"];
 
+            $istemplatechanged = isset($data['coursetemplate']);
             $isopendatachanged = isset($data['opendate']);
             $isclosedatachanged = isset($data['closedate']);
 
-            if ($isopendatachanged || $isclosedatachanged) {
+            if ($istemplatechanged) {
+                // Сохранить текущих пользователей и их роли
+                $users = self::format_fqw_get_users($event->courseid);
+                course_importer::import_from_template($data['coursetemplate'], $event->courseid);
+                self::format_fqw_restore_users($event->courseid, $users);
+                self::format_fqw_update_assignment_dates($event->courseid, true, true);
+            }            
+            else if ($isopendatachanged || $isclosedatachanged) {
                 self::format_fqw_update_assignment_dates($event->courseid, $isopendatachanged, $isclosedatachanged);
             }
         }
     }
 
+    private static function format_fqw_get_users($courseid) {
+        global $DB;
+        
+        $users = array();     
+        $users = $DB->get_records_sql(
+            "SELECT ra.userid, ra.roleid
+                FROM {role_assignments} ra
+                JOIN {context} ctx ON ra.contextid = ctx.id
+                WHERE ctx.contextlevel = :contextlevel AND ctx.instanceid = :courseid",
+            ['contextlevel' => CONTEXT_COURSE, 'courseid' => $courseid]);
+
+        return $users;
+    }
+
+    private static function format_fqw_restore_users($courseid, $users) {
+        $context = \context_course::instance($courseid);
+    
+        foreach ($users as $user) {
+            $isenroled = self::format_fqw_enrol_user($user, $courseid);
+
+            if ($isenroled) {
+                role_assign($user->roleid, $user->userid, $context->id);
+            }
+        }
+    }
+
+    private static function format_fqw_enrol_user($user, $courseid) {
+        $enrol = \enrol_get_plugin('manual'); // Используйте нужный плагин зачисления
+        if ($enrol) {
+            $instances = \enrol_get_instances($courseid, true);
+            foreach ($instances as $instance) {
+                $plugin = \enrol_get_plugin($instance->enrol);
+                if ($plugin->allow_enrol($instance)) {
+                    return $plugin->enrol_user($instance, $user->userid, $user->roleid);
+                }
+            }
+        }
+    
+        return false; // Зачисление не удалось
+    }
+
     private static function format_fqw_update_assignment_dates($courseid, $isopendatachanged = false, $isclosedatachanged = false) {
         global $DB;
 
-        if ($isopendatachanged === true) {
-            $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
-        }
-        if ($isclosedatachanged === true) {
-            $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
-        }
-        
-        // Получаем задания только из секции с id=1
-        $assignments = $DB->get_records_sql(
-            "SELECT a.*
-            FROM {assign} a
-            JOIN {course_modules} cm ON cm.instance = a.id
-            JOIN {modules} m ON m.id = cm.module
-            JOIN {course_sections} cs ON cs.id = cm.section
-            WHERE a.course = ? AND cs.section = 1",
-            [$courseid]
-        );
-
-        foreach ($assignments as $assignment) {
-            $assignmentdata = new \stdClass();
-            $assignmentdata->id = $assignment->id;
-
+        if ($isopendatachanged || $isclosedatachanged) {
             if ($isopendatachanged === true) {
-                $assignmentdata->allowsubmissionsfromdate = $opendate;
+                $opendate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'opendate']);
             }
             if ($isclosedatachanged === true) {
-                $assignmentdata->duedate = $closedate;
+                $closedate = $DB->get_field('course_format_options', 'value', ['courseid' => $courseid, 'format' => 'fqw', 'name' => 'closedate']);
             }
             
-            $DB->update_record('assign', $assignmentdata);
-        }
+            // Получаем задания только из секции с id=1
+            $assignments = $DB->get_records_sql(
+                "SELECT a.*
+                FROM {assign} a
+                JOIN {course_modules} cm ON cm.instance = a.id
+                JOIN {modules} m ON m.id = cm.module
+                JOIN {course_sections} cs ON cs.id = cm.section
+                WHERE a.course = ? AND cs.section = 1",
+                [$courseid]
+            );
 
-        // Очистка кэша для курса
-        \cache_helper::invalidate_by_definition('core', 'coursemodinfo', [$courseid]);
-        rebuild_course_cache($courseid, true);
+            foreach ($assignments as $assignment) {
+                $assignmentdata = new \stdClass();
+                $assignmentdata->id = $assignment->id;
+
+                if ($isopendatachanged === true) {
+                    $assignmentdata->allowsubmissionsfromdate = $opendate;
+                }
+                if ($isclosedatachanged === true) {
+                    $assignmentdata->duedate = $closedate;
+                }
+                
+                $DB->update_record('assign', $assignmentdata);
+            }
+
+            // Очистка кэша для курса
+            \cache_helper::invalidate_by_definition('core', 'coursemodinfo', [$courseid]);
+            rebuild_course_cache($courseid, true);
+        }
     }
 
     /**
@@ -129,6 +181,13 @@ class observer {
             return;
         }
 
+        $course = $DB->get_record('course', ['id' => $event->courseid], 'format', MUST_EXIST);
+
+        // Проверяем, что курс имеет формат fqw
+        if ($course->format !== 'fqw') {
+            return;
+        }
+
         $courseid = $context->instanceid;
 
         $role = $DB->get_record('role', array('id' => $objectid), '*', MUST_EXIST);
@@ -142,7 +201,7 @@ class observer {
 
         $module = $DB->get_record('modules', array('name' => 'assign'), '*', MUST_EXIST);
 
-        $section = 2; // Добавить в верхний раздел курса
+        $section = 2; // Добавить в нижний раздел курса
 
         $firstsecondnames = explode(" ", $user->firstname);
         $userinitials = '';
