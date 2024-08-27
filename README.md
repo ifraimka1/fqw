@@ -1,8 +1,8 @@
-# FQW #
+# Плагин Final Qualification Work (course_format) #
 
-TODO Describe the plugin shortly here.
+Плагин для автоматизации процесса организации и сопровождения ГИА в Moodle.
+Автоматически наполняет курс необходимыми элементами для ГИА по регламенту ЮФУ. При зачислении на курс члена ГЭК автоматически создает для него именованное оценочное средство.
 
-TODO Provide more detailed description here.
 
 ## Installing via uploaded ZIP file ##
 
